@@ -85,6 +85,10 @@ class IstaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return {
             consumption_unit: self.ista.get_consumption_data(consumption_unit)
             for consumption_unit in self.ista.get_uuids()
+            if any(
+                d["id"] == consumption_unit
+                for d in (self.ista.get_consumption_unit_details() or {}).get("consumptionUnits", [])
+            )
         }
 
     def get_details(self) -> dict[str, Any]:
@@ -94,10 +98,17 @@ class IstaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         result = self.ista.get_consumption_unit_details()
 
         return {
-            consumption_unit: next(
-                details
-                for details in result["consumptionUnits"]
-                if details["id"] == consumption_unit
-            )
+            consumption_unit: details
             for consumption_unit in self.ista.get_uuids()
+            for details in [
+                next(
+                    (
+                        d
+                        for d in result["consumptionUnits"]
+                        if d["id"] == consumption_unit
+                    ),
+                    None,
+                )
+            ]
+            if details is not None
         }
